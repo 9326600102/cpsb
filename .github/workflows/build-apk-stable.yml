@@ -1,0 +1,108 @@
+name: Build Android APK (Stable)
+
+on:
+  workflow_dispatch:  # 仅手动触发，避免自动构建消耗资源
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04  # 使用更稳定的Ubuntu版本
+    timeout-minutes: 120   # 增加超时时间
+
+    steps:
+    - uses: actions/checkout@v3  # 使用较稳定的checkout版本
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'  # 使用更稳定的Python版本
+        cache: 'pip'           # 启用pip缓存
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip wheel setuptools
+        pip install buildozer==1.2.0 cython==0.29.21  # 使用非常稳定的旧版本
+
+    - name: Install system dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y --no-install-recommends git zip unzip openjdk-11-jdk python3-pip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtiff5-dev libfreetype6-dev liblcms2-dev libwebp-dev tcl8.6-dev tk8.6-dev python3-tk libharfbuzz-dev libfribidi-dev libxcb1-dev
+
+    - name: FULL CLEAN - Remove ALL previous builds and caches
+      run: |
+        echo "Cleaning build environment..."
+        cd kivy_app
+        rm -rf .buildozer
+        rm -rf bin
+        rm -rf .gitignore
+        rm -rf __pycache__
+        rm -f *.log
+        rm -f .buildozer-*  # 移除所有buildozer相关的隐藏文件
+        mkdir -p bin
+        echo "Clean completed!"
+
+    - name: Show system information
+      run: |
+        echo "System Information:"
+        uname -a
+        python --version
+        pip --version
+        buildozer --version
+        java --version
+        ls -la kivy_app/
+
+    - name: Build APK with STABLE configuration
+      env:
+        PYTHONUNBUFFERED: 1
+        PYTHONIOENCODING: utf-8
+        BUILDOZER_WARN_ON_ROOT: '0'  # 禁用root警告
+        ANDROID_SDK_ROOT: '/tmp/android-sdk'  # 使用临时SDK路径
+      run: |
+        cd kivy_app
+        echo "Starting build at $(date)"
+        
+        # 创建简化的buildozer.spec（仅包含必要配置）
+        cat > buildozer.spec << 'EOF'
+[app]
+title = License Plate Recognition
+package.name = licenseplaterecognition
+package.domain = org.example
+source.dir = .
+source.include_exts = py,png,jpg,kv
+requirements = python3,kivy==2.0.0,opencv-python,numpy,pillow
+orientation = landscape
+
+[android]
+android.permissions = CAMERA,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE
+android.api = 31
+android.minapi = 21
+android.ndk = 23.1.7779620
+android.use_androidx = True
+fullscreen = 0
+EOF
+
+        # 显示最终的buildozer配置
+        echo "Buildozer configuration:"
+        cat buildozer.spec
+
+        # 执行构建，使用更详细的日志
+        buildozer -vvvv android debug 2>&1 | tee -a build.log
+        
+        echo "Build finished at $(date) with exit code: $?"
+        
+        # 检查构建结果
+        ls -la bin/ 2>/dev/null || echo "Bin directory not found"
+        ls -la .buildozer/ 2>/dev/null || echo ".buildozer directory not found"
+
+    - name: Upload build logs
+      if: always()  # 无论构建是否成功都上传日志
+      uses: actions/upload-artifact@v3
+      with:
+        name: build-logs
+        path: kivy_app/*.log
+
+    - name: Upload APK if successful
+      if: success()  # 仅在构建成功时上传APK
+      uses: actions/upload-artifact@v3
+      with:
+        name: license-plate-recognition-apk
+        path: kivy_app/bin/*.apk
