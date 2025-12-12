@@ -1,0 +1,154 @@
+name: Build Android APK (Patched)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    timeout-minutes: 120
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.8'  # 使用更旧的Python版本
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip wheel setuptools
+        pip install buildozer==1.4.0 cython==0.29.32
+
+    - name: PATCH buildozer to fix "read of closed file" error
+      run: |
+        # 找到buildozer包的位置
+        BUILDOZER_PATH=$(python -c "import buildozer; print(buildozer.__file__)")
+        BUILDOZER_DIR=$(dirname $BUILDOZER_PATH)
+        
+        echo "Found buildozer at: $BUILDOZER_DIR"
+        
+        # 创建修复后的download函数
+        cat > $BUILDOZER_DIR/__init__.py << 'EOF'
+"""
+Buildozer: Android and iOS build tool for Kivy.
+"""
+
+import os
+import sys
+import shutil
+import tempfile
+import argparse
+import subprocess
+import time
+import logging
+import itertools
+from urllib.request import urlretrieve
+from collections import OrderedDict
+from configparser import ConfigParser
+
+# Set up logging
+logger = logging.getLogger(__name__)
+
+def download(url, filename):
+    """Download a file from url to filename, with progress reporting.
+    
+    This is a patched version that fixes the "read of closed file" error.
+    """
+    logger.info('Downloading {} to {}'.format(url, filename))
+    
+    def report_hook(count, block_size, total_size):
+        """Report download progress."""
+        if total_size <= 0:
+            return
+        percent = int(count * block_size * 100 / total_size)
+        if percent > 100:
+            percent = 100
+        sys.stdout.write("\rDownloading {} ... {:.1f}%".format(
+            os.path.basename(filename), percent))
+        sys.stdout.flush()
+    
+    # Fix: 使用更简单的下载方法，避免临时文件问题
+    try:
+        # 使用subprocess调用curl或wget，完全绕过Python的urlretrieve
+        if shutil.which('curl'):
+            subprocess.run(['curl', '-L', '-o', filename, url], check=True)
+            logger.info('Download completed using curl')
+        elif shutil.which('wget'):
+            subprocess.run(['wget', '-O', filename, url], check=True)
+            logger.info('Download completed using wget')
+        else:
+            # 如果没有curl或wget，使用修复版的urlretrieve
+            logger.warning('curl/wget not found, falling back to urlretrieve')
+            # 修复：不使用report_hook，避免临时文件关闭问题
+            urlretrieve(url, filename)
+        sys.stdout.write('\n')
+    except Exception as e:
+        logger.error('Download failed: {}'.format(e))
+        raise
+
+# 导入其他必要的模块和函数
+from buildozer.buildozer import Buildozer
+from buildozer.scripts.client import main
+EOF
+        
+        echo "Buildozer patched successfully!"
+
+    - name: Install system dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y --no-install-recommends git zip unzip openjdk-11-jdk python3-pip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtiff5-dev libfreetype6-dev liblcms2-dev libwebp-dev tcl8.6-dev tk8.6-dev python3-tk libharfbuzz-dev libfribidi-dev libxcb1-dev
+
+    - name: Clean build environment
+      run: |
+        cd kivy_app
+        rm -rf .buildozer bin
+        mkdir -p bin
+
+    - name: Build APK
+      env:
+        PYTHONUNBUFFERED: 1
+        PYTHONIOENCODING: utf-8
+        BUILDOZER_WARN_ON_ROOT: '1'
+      run: |
+        cd kivy_app
+        # 创建buildozer.spec
+        cat > buildozer.spec << 'EOF'
+[app]
+title = License Plate Recognition
+package.name = licenseplaterecognition
+package.domain = org.example
+source.dir = .
+source.include_exts = py,png,jpg,kv
+requirements = python3,kivy==2.1.0,opencv-python,numpy,pillow
+orientation = landscape
+
+[android]
+android.permissions = CAMERA,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE
+android.api = 31
+android.minapi = 21
+android.ndk = 25.1.8937393
+android.use_androidx = True
+fullscreen = 0
+EOF
+        
+        # 执行构建
+        buildozer android debug 2>&1 | tee build.log
+
+    - name: Upload APK
+      if: success()
+      uses: actions/upload-artifact@v3
+      with:
+        name: license-plate-recognition-apk
+        path: kivy_app/bin/*.apk
+
+    - name: Upload logs
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: build-logs
+        path: |
+          kivy_app/*.log
+          kivy_app/.buildozer/android/platform/build-arm64-v8a_armeabi-v7a/logs/
