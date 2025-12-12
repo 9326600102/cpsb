@@ -38,8 +38,8 @@ requirements = python3,kivy==2.1.0,opencv-python,numpy,pytesseract,pillow
 # Sets custom source for any requirements with recipes
 #requirements.source.kivy = ../../kivy
 
-# (str) Supported orientation (one of landscape, portrait or all)
-orientation = all
+# (str) Supported orientation (one of landscape, portrait, landscape-reverse, portrait-reverse)
+orientation = landscape,portrait
 
 #
 # Android specific
