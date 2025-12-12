@@ -39,7 +39,7 @@ requirements = python3,kivy==2.1.0,opencv-python,numpy,pytesseract,pillow
 #requirements.source.kivy = ../../kivy
 
 # (str) Supported orientation (one of landscape, portrait, landscape-reverse, portrait-reverse)
-orientation = landscape,portrait
+orientation = landscape
 
 #
 # Android specific
@@ -156,4 +156,5 @@ verbose = 2
 
 # (bool) If true, then buildozer will use color into the output
 color = 1
+
 
