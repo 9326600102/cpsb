@@ -1,0 +1,35 @@
+name: Build Android APK (Final Solution)
+
+on:
+  workflow_dispatch:  # 仅手动触发
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: 使用预配置的Android构建环境
+      uses: docker://kivy/buildozer:stable
+      with:
+        args: |
+          bash -c "cd /github/workspace/kivy_app && \
+                  rm -rf .buildozer bin && \
+                  mkdir -p bin && \
+                  echo '[app]\ntitle = License Plate Recognition\npackage.name = licenseplaterecognition\npackage.domain = org.example\nsource.dir = .\nsource.include_exts = py,png,jpg,kv\nrequirements = python3,kivy==2.0.0,opencv-python,numpy,pillow\norientation = landscape\n\n[android]\nandroid.permissions = CAMERA,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE\nandroid.api = 31\nandroid.minapi = 21\nandroid.ndk = 23.1.7779620\nandroid.use_androidx = True\nfullscreen = 0' > buildozer.spec && \
+                  buildozer android debug"
+
+    - name: 上传APK
+      uses: actions/upload-artifact@v3
+      with:
+        name: license-plate-recognition-apk
+        path: kivy_app/bin/*.apk
+
+    - name: 上传日志
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: build-logs
+        path: kivy_app/*.log
