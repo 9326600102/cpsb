@@ -34,10 +34,11 @@ jobs:
 
     - name: Build APK
       run: |
+        cd kivy_app
         buildozer -v android debug
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: license-plate-recognition-apk
-        path: bin/*.apk
+        path: kivy_app/bin/*.apk
