@@ -52,16 +52,16 @@ fullscreen = 0
 android.permissions = CAMERA,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE
 
 # (int) Target Android API, should be as high as possible.
-android.api = 31
+android.api = 33
 
 # (int) Minimum API your APK will support.
 android.minapi = 21
 
 # (int) Android SDK version to use
-android.sdk = 24
+android.sdk = 33
 
 # (str) Android NDK version to use
-android.ndk = 25b
+android.ndk = 25.1.8937393
 
 # (int) Android NDK API to use. This is the minimum API your app will support, it should usually match android.minapi.
 android.ndk_api = 21
@@ -100,9 +100,6 @@ android.use_androidx = True
 # (bool) If True, then automatically accept SDK license
 sdk.accept_license = True
 
-# (str) Android entry point, default is ok for Kivy-based app
-#android.entrypoint = org.kivy.android.PythonActivity
-
 # (str) Full name including package path of the Java class that implements Android Activity
 # use that parameter together with android.entrypoint to set custom Java class instead of PythonActivity
 #android.activity_class_name = org.kivy.android.PythonActivity
@@ -137,35 +134,8 @@ sdk.accept_license = True
 # (list) Gradle dependencies to add
 #android.gradle_dependencies = 
 
-# (bool) Enable AndroidX support
-#android.use_androidx = True
-
 # (list) rules to exclude various files
 #android.add_excludes = assets/*.mp3
-
-# (bool) Use --private data storage (True) or --dir public storage (False)
-#android.private_storage = True
-
-# (str) Android API to use
-#android.api = 33
-
-# (str) Minimum API required
-#android.minapi = 21
-
-# (str) Android SDK version to use
-#android.sdk = 33
-
-# (str) Android NDK version to use
-#android.ndk = 25.1.8937393
-
-# (int) Android NDK API to use
-#android.ndk_api = 21
-
-# (bool) Use --private data storage (True) or --dir public storage (False)
-#android.private_storage = True
-
-# (bool) Android logcat filters to use
-#android.logcat_filters = *:S python:D
 
 # (bool) Copy library instead of making a libpymodules.so
 #android.copy_libs = 1
