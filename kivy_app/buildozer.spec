@@ -58,7 +58,7 @@ android.api = 33
 android.minapi = 21
 
 # (int) Android SDK version to use
-android.sdk = 33
+# android.sdk is deprecated and should not be set
 
 # (str) Android NDK version to use
 android.ndk = 25.1.8937393
@@ -156,3 +156,4 @@ verbose = 2
 
 # (bool) If true, then buildozer will use color into the output
 color = 1
+
